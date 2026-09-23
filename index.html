@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Mo-Cap Mirror Widget</title>
+    <style>
+        :root {
+            --accent-color: #00d2ff;
+            --handle-color: #ffffff;
+            --text-light: #f8f9fa;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .widget-container {
+            width: 100%;
+            max-width: 700px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Split View Container */
+        .split-view-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+        /* Common View Styles */
+        .view-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .label {
+            position: absolute;
+            top: 20px;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.6);
+            color: var(--text-light);
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            z-index: 10;
+        }
+
+        /* Right Side: CGI Render (Background Layer) */
+        .cgi-render {
+            background: radial-gradient(circle at 50% 50%, #2a4365 0%, #1a202c 80%);
+            z-index: 1;
+        }
+        
+        .cgi-render .label {
+            right: 20px;
+        }
+
+        /* Simulated CGI Figure */
+        .cgi-figure {
+            width: 150px;
+            height: 250px;
+            background: linear-gradient(135deg, #4fd1c5 0%, #319795 100%);
+            border-radius: 40% 40% 60% 60% / 30% 30% 70% 70%;
+            box-shadow: inset -10px -20px 30px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.4);
+            position: relative;
+        }
+
+        /* Left Side: Mo-Cap Actor (Foreground Layer) */
+        .mocap-actor {
+            background: #2d3748;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            z-index: 2;
+            width: 50%; /* Initial split width */
+            border-right: 2px solid var(--accent-color);
+        }
+
+        .mocap-actor .label {
+            left: 20px;
+        }
+
+        /* Simulated Mo-Cap Figure */
+        .mocap-figure {
+            width: 150px;
+            height: 250px;
+            background: #1a202c;
+            border-radius: 40% 40% 60% 60% / 30% 30% 70% 70%;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-wrap: wrap;
+            align-content: space-around;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Mo-Cap Tracking Dots */
+        .tracking-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #00ff00;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00ff00;
+            margin: 15px;
+        }
+
+        /* Range Slider Input */
+        .split-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            opacity: 0;
+            z-index: 4;
+            cursor: ew-resize;
+        }
+
+        /* Custom Slider Handle (Visual only, controlled by input) */
+        .slider-handle-visual {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 40px;
+            height: 40px;
+            background-color: var(--handle-color);
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            top: 50%;
+            z-index: 3;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* Chevron arrows inside the handle */
+        .slider-handle-visual::before,
+        .slider-handle-visual::after {
+            content: '';
+            display: block;
+            width: 0;
+            height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+        }
+        
+        .slider-handle-visual::before {
+            border-right: 6px solid #333;
+            margin-right: 4px;
+        }
+        
+        .slider-handle-visual::after {
+            border-left: 6px solid #333;
+            margin-left: 4px;
+        }
+
+        /* Descriptive Controls Area */
+        .controls {
+            padding: 24px;
+            background: #fff;
+            text-align: center;
+        }
+
+        .widget-title {
+            margin: 0 0 10px 0;
+            font-size: 1.2rem;
+            color: #333;
+            font-weight: 700;
+        }
+
+        .widget-desc {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="widget-container">
+        <!-- Interactive Split Screen -->
+        <div class="split-view-container">
+            
+            <!-- Bottom Layer: Final CGI Render -->
+            <div class="view-layer cgi-render">
+                <div class="label">Final Render</div>
+                <div class="cgi-figure"></div>
+            </div>
+
+            <!-- Top Layer: Raw Mo-Cap Data -->
+            <div class="view-layer mocap-actor" id="mocapLayer">
+                <div class="label">Raw Mo-Cap Data</div>
+                <div class="mocap-figure">
+                    <!-- Tracking Dots -->
+                    <div class="tracking-dot"></div><div class="tracking-dot"></div>
+                    <div class="tracking-dot"></div><div class="tracking-dot"></div>
+                    <div class="tracking-dot"></div><div class="tracking-dot"></div>
+                    <div class="tracking-dot"></div><div class="tracking-dot"></div>
+                </div>
+            </div>
+
+            <!-- Visual Handle -->
+            <div class="slider-handle-visual" id="handleVisual"></div>
+
+            <!-- Invisible Range Input for Interaction -->
+            <input type="range" min="0" max="100" value="50" class="split-slider" id="slider">
+
+        </div>
+
+        <!-- Instructions -->
+        <div class="controls">
+            <h3 class="widget-title">Performance Capture Integration</h3>
+            <p class="widget-desc">Drag the center slider left and right to see how physical LED tracking markers translate onto the digital mesh skeleton in real-time.</p>
+        </div>
+    </div>
+
+    <script>
+        const slider = document.getElementById('slider');
+        const mocapLayer = document.getElementById('mocapLayer');
+        const handleVisual = document.getElementById('handleVisual');
+
+        // Update the width of the top layer and position of the handle on drag
+        slider.addEventListener('input', function(e) {
+            const sliderValue = e.target.value;
+            mocapLayer.style.width = sliderValue + '%';
+            handleVisual.style.left = sliderValue + '%';
+        });
+    </script>
+
+</body>
+</html>
